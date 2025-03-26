@@ -14,10 +14,15 @@
 RwTexture* gpSmokeTrailTexture;
 RwTexture* gpTraceTexture;
 
-float CBulletTraces::thickness[512];
-int CBulletTraces::lifetime[512];
-int CBulletTraces::visibility[512];
 int CBulletTraces::type[512];
+int CBulletTraces::lifetime[512];
+int CBulletTraces::applysound[512];
+int CBulletTraces::randomlength[512];
+float CBulletTraces::thickness[512];
+int CBulletTraces::red[512];
+int CBulletTraces::green[512];
+int CBulletTraces::blue[512];
+int CBulletTraces::visibility[512];
 
 static RwIm3DVertex TraceVerticesSA[6];
 static uint16_t TraceIndexListSA[12] = { 4, 1, 3, 1, 0, 3, 0, 2, 3, 3, 2, 5 };
@@ -78,7 +83,7 @@ void CBulletTraces::Init(void)
 	TraceIndexListIII[10] = 4;
 	TraceIndexListIII[11] = 5;
 
-	// VC
+	// VC & Stories
 	RwIm3DVertexSetU(&VCTraceVertices[0], 0.0);
 	RwIm3DVertexSetV(&VCTraceVertices[0], 0.0);
 	RwIm3DVertexSetU(&VCTraceVertices[1], 1.0);
@@ -108,7 +113,7 @@ void CBulletTraces::Init(void)
 	VCTraceIndexList[10] = 4;
 	VCTraceIndexList[11] = 5;
 
-	// SA & Stories
+	// SA
 	RwIm3DVertexSetRGBA(&TraceVerticesSA[0], 255, 255, 128, 0);
 	RwIm3DVertexSetRGBA(&TraceVerticesSA[1], 255, 255, 128, 0);
 	RwIm3DVertexSetRGBA(&TraceVerticesSA[2], 255, 255, 128, 0);
@@ -132,19 +137,34 @@ void CBulletTraces::Init(void)
 
 		const char* formatted_str2 = formatted_str.c_str();
 		
-		std::string strb = ini.get(formatted_str2).get("thickness");
+		std::string strb = ini.get(formatted_str2).get("type");
 		const char* strb2 = strb.c_str();
 		std::string strc = ini.get(formatted_str2).get("lifetime");
 		const char* strc2 = strc.c_str();
-		std::string strd = ini.get(formatted_str2).get("visibility");
+		std::string strd = ini.get(formatted_str2).get("applysound");
 		const char* strd2 = strd.c_str();
-		std::string stre = ini.get(formatted_str2).get("type");
+		std::string stre = ini.get(formatted_str2).get("randomlength");
 		const char* stre2 = stre.c_str();
+		std::string strf = ini.get(formatted_str2).get("thickness");
+		const char* strf2 = strf.c_str();
+		std::string strg = ini.get(formatted_str2).get("red");
+		const char* strg2 = strg.c_str();
+		std::string strh = ini.get(formatted_str2).get("green");
+		const char* strh2 = strh.c_str();
+		std::string stri = ini.get(formatted_str2).get("blue");
+		const char* stri2 = stri.c_str();
+		std::string strj = ini.get(formatted_str2).get("visibility");
+		const char* strj2 = strj.c_str();
 
-		thickness[i] = std::atof(strb2);
+		type[i] = std::atoi(strb2);
 		lifetime[i] = std::atoi(strc2);
-		visibility[i] = std::atoi(strd2);
-		type[i] = std::atoi(stre2);
+		applysound[i] = std::atoi(strd2);
+		randomlength[i] = std::atof(stre2);
+		thickness[i] = std::atof(strf2);
+		red[i] = std::atoi(strg2);
+		green[i] = std::atoi(strh2);
+		blue[i] = std::atoi(stri2);
+		visibility[i] = std::atoi(strj2);
 
 	}
 
@@ -152,7 +172,8 @@ void CBulletTraces::Init(void)
 
 CBulletTrace CBulletTraces::aTraces[255];
 
-void CBulletTraces::AddTrace(CVector* start, CVector* end, float thickness, uint32_t lifeTime, uint8_t visibility, uint8_t type)
+void CBulletTraces::AddTrace(CVector* start, CVector* end, uint8_t applysound, uint8_t randomlength, float thickness,
+	uint32_t lifeTime, uint8_t visibility, uint8_t type, uint8_t red, uint8_t green, uint8_t blue)
 {
 	int32_t enabledCount;
 	uint32_t modifiedLifeTime;
@@ -165,7 +186,7 @@ void CBulletTraces::AddTrace(CVector* start, CVector* end, float thickness, uint
 
 	switch (type) {
 		case TYPE_III:
-			modifiedLifeTime = 25 + GetRandomNumber() % 32;
+			modifiedLifeTime = lifeTime; // restrictions weren't applied to III traces in the game
 			break;
 		case TYPE_VC:
 		case TYPE_SA:
@@ -187,15 +208,21 @@ void CBulletTraces::AddTrace(CVector* start, CVector* end, float thickness, uint
 		aTraces[nextSlot].m_vecEndPos = *end;
 		aTraces[nextSlot].m_bInUse = true;
 		aTraces[nextSlot].m_nCreationTime = CTimer::m_snTimeInMilliseconds;
-		aTraces[nextSlot].m_fVisibility = visibility;
-		aTraces[nextSlot].m_fThickness = thickness;
 		aTraces[nextSlot].type = type;
-		aTraces[nextSlot].m_framesInUse = 0;
 		aTraces[nextSlot].m_nLifeTime = modifiedLifeTime;
+		aTraces[nextSlot].m_fThickness = thickness;
+		aTraces[nextSlot].m_nRed = red;
+		aTraces[nextSlot].m_nGreen = green;
+		aTraces[nextSlot].m_nBlue = blue;
+		aTraces[nextSlot].m_fVisibility = visibility;
+		//aTraces[nextSlot].m_framesInUse = 0; // cut III bs
 	}
 
-	CBulletTraces::ProcessEffects(&aTraces[nextSlot]);
+	if (applysound)
+		CBulletTraces::ProcessEffects(&aTraces[nextSlot]);
 
+	// why we need this code?
+	/*
 	float startProjFwd = DotProduct(TheCamera.GetForward(), *start - TheCamera.GetPosition());
 	float endProjFwd = DotProduct(TheCamera.GetForward(), *end - TheCamera.GetPosition());
 	if (startProjFwd * endProjFwd < 0.0f) { //if one of point behind us and second before us
@@ -210,7 +237,7 @@ void CBulletTraces::AddTrace(CVector* start, CVector* end, float thickness, uint
 		float distRight = (endProjRight - startProjRight) * fStartDistFwd + startProjRight;
 
 		float dist = sqrt(SQR(distUp) + SQR(distRight));
-	}
+	}*/
 }
 
 void CBulletTraces::AddTrace2(CVector* start, CVector* end, int32_t weaponType, class CEntity* shooter)
@@ -240,7 +267,7 @@ void CBulletTraces::AddTrace2(CVector* start, CVector* end, int32_t weaponType, 
 	CVector from = *start;
 	CVector to = *end;
 
-	if (type[weaponType] == TYPE_SA)
+	if (randomlength[weaponType])
 	{
 		CVector dir = *end - *start;
 		const float traceLengthOriginal = dir.Magnitude();
@@ -265,10 +292,15 @@ void CBulletTraces::AddTrace2(CVector* start, CVector* end, int32_t weaponType, 
 	AddTrace(
 		&from,
 		&to,
+		applysound[weaponType],
+		randomlength[weaponType],
 		thickness[weaponType],
 		lifetime[weaponType],
 		visibility[weaponType],
-		type[weaponType]
+		type[weaponType],
+		red[weaponType],
+		green[weaponType],
+		blue[weaponType]
 	);
 }
 
@@ -287,10 +319,10 @@ void CBulletTraces::Render(void)
 				Render_III(i);
 				break;
 			case TYPE_VC:
+			case TYPE_STORIES:
 				Render_VC(i);
 				break;
 			case TYPE_SA:
-			case TYPE_STORIES:
 			default:
 				Render_SA(i);
 				break;
@@ -311,29 +343,8 @@ void CBulletTraces::Update(void)
 
 void CBulletTrace::Update(void)
 {
-	CVector diff;
-	float remaining;
-
 	switch (type) {
 	case TYPE_III:
-		if (m_framesInUse == 0) {
-			m_framesInUse++;
-			return;
-		}
-		if (m_framesInUse > 60) {
-			m_bInUse = false;
-			return;
-		}
-		diff = m_vecStartPos - m_vecEndPos;
-		remaining = diff.Magnitude();
-		if (remaining > 0.8f)
-			m_vecStartPos = m_vecEndPos + (remaining - 0.8f) / remaining * diff;
-		else
-			m_bInUse = false;
-		if (--m_nLifeTime == 0)
-			m_bInUse = false;
-		m_framesInUse++;
-		break;
 	case TYPE_VC:
 	case TYPE_SA:
 	default:
@@ -356,6 +367,10 @@ void CBulletTraces::Shutdown(void) {
 }
 
 void CBulletTraces::Render_III(int current_slot) {
+
+	const float t = 1.0f - (float)(CTimer::m_snTimeInMilliseconds - aTraces[current_slot].m_nCreationTime) / (float)aTraces[current_slot].m_nLifeTime;
+	CVector currPosOnTrace = aTraces[current_slot].m_vecEndPos - (aTraces[current_slot].m_vecEndPos - aTraces[current_slot].m_vecStartPos) * t;
+
 	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)FALSE);
 #ifdef FIX_BUGS
 	// Raster has no transparent pixels so it relies on the raster format having alpha
@@ -366,15 +381,22 @@ void CBulletTraces::Render_III(int current_slot) {
 	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
 	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDONE);
 	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(gpTraceTexture));
-	CVector inf = aTraces[current_slot].m_vecStartPos;
+
+	CVector inf = currPosOnTrace;
 	CVector sup = aTraces[current_slot].m_vecEndPos;
+
 	CVector center = (inf + sup) / 2;
+
 	CVector width = aTraces[current_slot].CrossProduct(TheCamera.GetForward(), (sup - inf));
 	width.Normalise();
-	width /= 20;
-	uint8_t intensity = aTraces[current_slot].m_nLifeTime;
+	width *= aTraces[current_slot].m_fThickness; //width /= 20;
+
+	//uint8_t intensity = (uint8_t)(t * 60.0); //aTraces[current_slot].m_nLifeTime;
+
 	for (int i = 0; i < ARRAY_SIZE(TraceVerticesIII); i++)
-		RwIm3DVertexSetRGBA(&TraceVerticesIII[i], intensity, intensity, intensity, 0xFF);
+		RwIm3DVertexSetRGBA(&TraceVerticesIII[i], (uint8_t)((float)(aTraces[current_slot].m_nRed) * t),
+			(uint8_t)((float)(aTraces[current_slot].m_nGreen) * t), (uint8_t)((float)(aTraces[current_slot].m_nBlue) * t), aTraces[current_slot].m_fVisibility);
+		//RwIm3DVertexSetRGBA(&TraceVerticesIII[i], intensity, intensity, intensity, 0xFF);
 	RwIm3DVertexSetPos(&TraceVerticesIII[0], inf.x + width.x, inf.y + width.y, inf.z + width.z);
 	RwIm3DVertexSetPos(&TraceVerticesIII[1], inf.x - width.x, inf.y - width.y, inf.z - width.z);
 	RwIm3DVertexSetPos(&TraceVerticesIII[2], center.x + width.x, center.y + width.y, center.z + width.z);
@@ -391,7 +413,11 @@ void CBulletTraces::Render_VC(int current_slot) {
 	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)FALSE);
 	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
 	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
-	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, (void*)(RwTextureGetRaster(gpSmokeTrailTexture)));
+
+	if (aTraces[current_slot].type == TYPE_VC)
+		RwRenderStateSet(rwRENDERSTATETEXTURERASTER, (void*)(RwTextureGetRaster(gpSmokeTrailTexture)));
+	else
+		RwRenderStateSet(rwRENDERSTATETEXTURERASTER, NULL);
 
 	float timeAlive = CTimer::m_snTimeInMilliseconds - aTraces[current_slot].m_nCreationTime;
 
@@ -432,24 +458,28 @@ void CBulletTraces::Render_VC(int current_slot) {
 	RwIm3DVertexSetV(&VCTraceVertices[8], 10.0f);
 	RwIm3DVertexSetV(&VCTraceVertices[9], 10.0f);
 
-	RwIm3DVertexSetRGBA(&VCTraceVertices[0], 255, 255, 255, nAlphaValue);
-	RwIm3DVertexSetRGBA(&VCTraceVertices[1], 255, 255, 255, nAlphaValue);
-	RwIm3DVertexSetRGBA(&VCTraceVertices[2], 255, 255, 255, nAlphaValue);
-	RwIm3DVertexSetRGBA(&VCTraceVertices[3], 255, 255, 255, nAlphaValue);
-	RwIm3DVertexSetRGBA(&VCTraceVertices[4], 255, 255, 255, nAlphaValue);
-	RwIm3DVertexSetRGBA(&VCTraceVertices[5], 255, 255, 255, nAlphaValue);
-	RwIm3DVertexSetRGBA(&VCTraceVertices[6], 255, 255, 255, nAlphaValue);
-	RwIm3DVertexSetRGBA(&VCTraceVertices[7], 255, 255, 255, nAlphaValue);
-	RwIm3DVertexSetRGBA(&VCTraceVertices[8], 255, 255, 255, nAlphaValue);
-	RwIm3DVertexSetRGBA(&VCTraceVertices[9], 255, 255, 255, nAlphaValue);
+	for (int i = 0; i < 10; i++) {
+
+		RwIm3DVertexSetRGBA(&VCTraceVertices[i], aTraces[current_slot].m_nRed, aTraces[current_slot].m_nGreen, aTraces[current_slot].m_nBlue, nAlphaValue);
+
+		// old
+		
+		//if (aTraces[current_slot].type == TYPE_STORIES)
+		//	RwIm3DVertexSetRGBA(&VCTraceVertices[i], 255, 140, 0, nAlphaValue);
+		//else 
+		//	RwIm3DVertexSetRGBA(&VCTraceVertices[i], 255, 255, 255, nAlphaValue);
+	}
+
 	//two points in center
 	RwIm3DVertexSetPos(&VCTraceVertices[0], start2.x, start2.y, start2.z);
 	RwIm3DVertexSetPos(&VCTraceVertices[5], end2.x, end2.y, end2.z);
+
 	//vertical planes
 	RwIm3DVertexSetPos(&VCTraceVertices[1], start2.x, start2.y, start2.z + traceThickness);
 	RwIm3DVertexSetPos(&VCTraceVertices[3], start2.x, start2.y, start2.z - traceThickness);
 	RwIm3DVertexSetPos(&VCTraceVertices[6], end2.x, end2.y, end2.z + traceThickness);
 	RwIm3DVertexSetPos(&VCTraceVertices[8], end2.x, end2.y, end2.z - traceThickness);
+
 	//horizontal planes
 	RwIm3DVertexSetPos(&VCTraceVertices[2], start2.x + horizontalOffset.y, start2.y - horizontalOffset.x, start2.z);
 	RwIm3DVertexSetPos(&VCTraceVertices[7], end2.x + horizontalOffset.y, end2.y - horizontalOffset.x, end2.z);
@@ -471,11 +501,13 @@ void CBulletTraces::Render_VC(int current_slot) {
 	RwIm3DVertexSetV(&VCTraceVertices[7], 2.0f);
 	RwIm3DVertexSetV(&VCTraceVertices[8], 2.0f);
 	RwIm3DVertexSetV(&VCTraceVertices[9], 2.0f);
-	RwIm3DVertexSetRGBA(&VCTraceVertices[0], 255, 255, 255, 0);
-	RwIm3DVertexSetRGBA(&VCTraceVertices[1], 255, 255, 255, 0);
-	RwIm3DVertexSetRGBA(&VCTraceVertices[2], 255, 255, 255, 0);
-	RwIm3DVertexSetRGBA(&VCTraceVertices[3], 255, 255, 255, 0);
-	RwIm3DVertexSetRGBA(&VCTraceVertices[4], 255, 255, 255, 0);
+
+	for (int i = 0; i < 5; i++) {
+		if (aTraces[current_slot].type == TYPE_STORIES)
+			RwIm3DVertexSetRGBA(&VCTraceVertices[i], 255, 140, 0, 0);
+		else 
+			RwIm3DVertexSetRGBA(&VCTraceVertices[i], 255, 255, 255, 0);
+	}
 
 	RwIm3DVertexSetPos(&VCTraceVertices[0], start.x, start.y, start.z);
 	RwIm3DVertexSetPos(&VCTraceVertices[1], start.x, start.y, start.z + traceThickness);
@@ -533,9 +565,7 @@ void CBulletTraces::Render_SA(int current_slot) {
 		CBulletTrace& trace = aTraces[current_slot];
 		if (!trace.m_bInUse) return;
 
-		float t = (float)(CTimer::m_snTimeInMilliseconds - trace.m_nCreationTime) / (float)trace.m_nLifeTime;
-		if (trace.type != TYPE_STORIES)
-			t = 1.0f - t;
+		const float t = 1.0f - (float)(CTimer::m_snTimeInMilliseconds - trace.m_nCreationTime) / (float)trace.m_nLifeTime;
 
 		CVector camToOriginDir = (trace.m_vecStartPos - TheCamera.GetPosition());
 		camToOriginDir.Normalise();
@@ -547,12 +577,7 @@ void CBulletTraces::Render_SA(int current_slot) {
 		up.Normalise();
 
 		CVector sizeVec = up * (trace.m_fThickness * t);
-		CVector currPosOnTrace;
-
-		if (trace.type == TYPE_STORIES)
-			currPosOnTrace = trace.m_vecEndPos - (trace.m_vecEndPos - trace.m_vecStartPos);
-		else
-			currPosOnTrace = trace.m_vecEndPos - (trace.m_vecEndPos - trace.m_vecStartPos) * t;
+		CVector currPosOnTrace = trace.m_vecEndPos - (trace.m_vecEndPos - trace.m_vecStartPos) * t;
 
 		RwIm3DVertexSetPos(&TraceVerticesSA[0], currPosOnTrace.x, currPosOnTrace.y, currPosOnTrace.z);
 		RwIm3DVertexSetPos(&TraceVerticesSA[1], currPosOnTrace.x + sizeVec.x, currPosOnTrace.y + sizeVec.y, currPosOnTrace.z + sizeVec.z);
@@ -561,19 +586,7 @@ void CBulletTraces::Render_SA(int current_slot) {
 		RwIm3DVertexSetPos(&TraceVerticesSA[4], trace.m_vecEndPos.x + sizeVec.x, trace.m_vecEndPos.y + sizeVec.y, trace.m_vecEndPos.z + sizeVec.z);
 		RwIm3DVertexSetPos(&TraceVerticesSA[5], trace.m_vecEndPos.x - sizeVec.x, trace.m_vecEndPos.y - sizeVec.y, trace.m_vecEndPos.z - sizeVec.z);
 
-		switch (trace.type) {
-		case TYPE_STORIES:
-			for (int i = 0; i < 6; i++)
-				RwIm3DVertexSetRGBA(&TraceVerticesSA[i], 255, 140, 0, (RwUInt8)(t * trace.m_fVisibility));
-			break;
-		case TYPE_SA:
-		default:
-			for (int i = 0; i < 6; i++) {
-				RwIm3DVertexSetRGBA(&TraceVerticesSA[i], 255, 255, 128, 0);
-			}
-			RwIm3DVertexSetRGBA(&TraceVerticesSA[3], 255, 255, 128, (RwUInt8)(t * trace.m_fVisibility));
-			break;
-		}
+		RwIm3DVertexSetRGBA(&TraceVerticesSA[3], aTraces[current_slot].m_nRed, aTraces[current_slot].m_nGreen, aTraces[current_slot].m_nBlue, (RwUInt8)(t * trace.m_fVisibility));
 		
 		if (RwIm3DTransform(TraceVerticesSA, ARRAY_SIZE(TraceVerticesSA), NULL, rwIM3D_VERTEXRGBA))
 		{
