@@ -16,6 +16,7 @@ RwTexture* gpTraceTexture;
 
 int CBulletTraces::type[512];
 int CBulletTraces::lifetime[512];
+int CBulletTraces::randomchance[512];
 int CBulletTraces::applysound[512];
 int CBulletTraces::randomlength[512];
 float CBulletTraces::thickness[512];
@@ -42,7 +43,7 @@ void CBulletTraces::Init(void)
 		aTraces[i].m_bInUse = false;
 	CTxdStore::PushCurrentTxd();
 	int32_t slot2 = CTxdStore::AddTxdSlot("BulletTrails");
-	CTxdStore::LoadTxd(slot2, GAME_PATH((char*)"MODELS\\BULLETTRAILS.TXD"));
+	CTxdStore::LoadTxd(slot2, PLUGIN_PATH((char*)"MODELS\\BULLETTRAILS.TXD"));
 	int32_t slot = CTxdStore::FindTxdSlot("BulletTrails");
 	CTxdStore::SetCurrentTxd(slot);
 	gpSmokeTrailTexture = RwTextureRead("smoketrail", NULL);
@@ -127,7 +128,7 @@ void CBulletTraces::Init(void)
 	file.read(ini);
 
 	//Reading weapons params
-	for (int32_t i = 22; i < 512; i++)
+	for (int32_t i = 0; i < 512; i++)
 	{
 
 		std::string name = "WEP";
@@ -141,30 +142,33 @@ void CBulletTraces::Init(void)
 		const char* strb2 = strb.c_str();
 		std::string strc = ini.get(formatted_str2).get("lifetime");
 		const char* strc2 = strc.c_str();
-		std::string strd = ini.get(formatted_str2).get("applysound");
+		std::string strd = ini.get(formatted_str2).get("randomchance");
 		const char* strd2 = strd.c_str();
-		std::string stre = ini.get(formatted_str2).get("randomlength");
+		std::string stre = ini.get(formatted_str2).get("applysound");
 		const char* stre2 = stre.c_str();
-		std::string strf = ini.get(formatted_str2).get("thickness");
+		std::string strf = ini.get(formatted_str2).get("randomlength");
 		const char* strf2 = strf.c_str();
-		std::string strg = ini.get(formatted_str2).get("red");
+		std::string strg = ini.get(formatted_str2).get("thickness");
 		const char* strg2 = strg.c_str();
-		std::string strh = ini.get(formatted_str2).get("green");
+		std::string strh = ini.get(formatted_str2).get("red");
 		const char* strh2 = strh.c_str();
-		std::string stri = ini.get(formatted_str2).get("blue");
+		std::string stri = ini.get(formatted_str2).get("green");
 		const char* stri2 = stri.c_str();
-		std::string strj = ini.get(formatted_str2).get("visibility");
+		std::string strj = ini.get(formatted_str2).get("blue");
 		const char* strj2 = strj.c_str();
+		std::string strk = ini.get(formatted_str2).get("visibility");
+		const char* strk2 = strk.c_str();
 
 		type[i] = std::atoi(strb2);
 		lifetime[i] = std::atoi(strc2);
-		applysound[i] = std::atoi(strd2);
-		randomlength[i] = std::atof(stre2);
-		thickness[i] = std::atof(strf2);
-		red[i] = std::atoi(strg2);
-		green[i] = std::atoi(strh2);
-		blue[i] = std::atoi(stri2);
-		visibility[i] = std::atoi(strj2);
+		randomchance[i] = std::atoi(strd2);
+		applysound[i] = std::atoi(stre2);
+		randomlength[i] = std::atof(strf2);
+		thickness[i] = std::atof(strg2);
+		red[i] = std::atoi(strh2);
+		green[i] = std::atoi(stri2);
+		blue[i] = std::atoi(strj2);
+		visibility[i] = std::atoi(strk2);
 
 	}
 
@@ -246,6 +250,9 @@ void CBulletTraces::AddTrace2(CVector* start, CVector* end, int32_t weaponType, 
 	float speed;
 	int16_t camMode;
 
+	if ((CGeneral::GetRandomNumber() % 100) > randomchance[weaponType])
+		return;
+
 	if (shooter == (CEntity*)FindPlayerPed() || (FindPlayerVehicle(NULL, NULL) != NULL && FindPlayerVehicle(NULL, NULL) == (CVehicle*)shooter)) {
 		camMode = TheCamera.m_aCams[TheCamera.m_nActiveCam].m_nMode;
 		if (camMode == MODE_M16_1STPERSON
@@ -301,6 +308,15 @@ void CBulletTraces::AddTrace2(CVector* start, CVector* end, int32_t weaponType, 
 		red[weaponType],
 		green[weaponType],
 		blue[weaponType]
+	);
+}
+
+void CBulletTraces::CreateTraceViaHitRound(CVector* start, CVector* end, float thickness, uint8_t time, uint8_t alpha) {
+	AddTrace2(
+		start,
+		end,
+		0,
+		nullptr
 	);
 }
 

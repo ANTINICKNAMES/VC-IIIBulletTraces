@@ -9,16 +9,17 @@ public:
     VCBulletTraces() {
         plugin::Events::initGameEvent += []() {
             CBulletTraces::Init();
-        };
+            };
         movingThingsEvent += []() {
             CBulletTraces::Render();
-        };
+            };
         plugin::Events::processScriptsEvent += []() {
             CBulletTraces::Update();
-        };
+            };
         plugin::Events::shutdownRwEvent += []() {
             CBulletTraces::Shutdown();
-        };
+            };
+        patch::RedirectCall(0x73AFC7, CBulletTraces::CreateTraceViaHitRound);
         patch::RedirectJump(0x726AF0, CBulletTraces::AddTrace2);
         patch::RedirectJump(0x723750, CBulletTraces::AddTrace);
         //patch::RedirectJump(0x723C10, CBulletTraces::Render);

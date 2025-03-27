@@ -44,6 +44,7 @@ public:
 	static void AddTrace(CVector* start, CVector* end, uint8_t applysound, uint8_t randomlength, float thickness,
 		uint32_t lifeTime, uint8_t visibility, uint8_t type, uint8_t red, uint8_t green, uint8_t blue);
 	static void AddTrace2(CVector* start, CVector* end, int32_t weaponType, class CEntity* shooter);
+	static void CreateTraceViaHitRound(CVector* start, CVector* end, float thickness, uint8_t time, uint8_t alpha);
 
 	static void Render_III(int current_slot);
 	static void Render_VC(int current_slot);
@@ -53,6 +54,7 @@ public:
 public:
 	static int type[512];
 	static int lifetime[512];
+	static int randomchance[512];
 	static int applysound[512];
 	static int randomlength[512];
 	static float thickness[512];
